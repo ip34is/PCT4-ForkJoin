@@ -5,7 +5,7 @@ import java.util.concurrent.RecursiveTask;
 
 public class WordLengthTask extends RecursiveTask<Map<Integer, Integer>> {
     private final List<String> words;
-    private static final int THRESHOLD = 2000;
+    private static final int THRESHOLD = 500;
 
     public WordLengthTask(List<String> words) {
         this.words = words;
@@ -16,9 +16,9 @@ public class WordLengthTask extends RecursiveTask<Map<Integer, Integer>> {
         if (words.size() <= THRESHOLD) {
             Map<Integer, Integer> localMap = new HashMap<>();
             for (String word : words) {
-                int length = word.replaceAll("[^a-zA-Zа-яА-Я0-9]", "").length();
-                if (length > 0) {
-                    localMap.merge(length, 1, Integer::sum);
+                String clean = word.replaceAll("[^a-zA-Zа-яА-Я0-9]", "");
+                if (!clean.isEmpty()) {
+                    localMap.merge(clean.length(), 1, Integer::sum);
                 }
             }
             return localMap;

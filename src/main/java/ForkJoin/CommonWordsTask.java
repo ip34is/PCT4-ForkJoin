@@ -4,17 +4,17 @@ import java.util.*;
 import java.util.concurrent.RecursiveTask;
 
 public class CommonWordsTask extends RecursiveTask<Set<String>> {
-    private final List<String> lines;
+    private final List<List<String>> documents;
 
-    public CommonWordsTask(List<String> lines) {
-        this.lines = lines;
+    public CommonWordsTask(List<List<String>> documents) {
+        this.documents = documents;
     }
 
     @Override
     protected Set<String> compute() {
-        if (lines.size() <= 50) {
+        if (documents.size() == 1) {
             Set<String> words = new HashSet<>();
-            for (String line : lines) {
+            for (String line : documents.get(0)) {
                 String[] parts = line.toLowerCase().split("\\s+");
                 for (String p : parts) {
                     String clean = p.replaceAll("[^a-zа-я]", "");
@@ -23,16 +23,15 @@ public class CommonWordsTask extends RecursiveTask<Set<String>> {
             }
             return words;
         }
-
-        int mid = lines.size() / 2;
-        CommonWordsTask t1 = new CommonWordsTask(lines.subList(0, mid));
-        CommonWordsTask t2 = new CommonWordsTask(lines.subList(mid, lines.size()));
+        int mid = documents.size() / 2;
+        CommonWordsTask t1 = new CommonWordsTask(documents.subList(0, mid));
+        CommonWordsTask t2 = new CommonWordsTask(documents.subList(mid, documents.size()));
 
         t1.fork();
         Set<String> res2 = t2.compute();
         Set<String> res1 = t1.join();
 
-        res1.addAll(res2);
+        res1.retainAll(res2);
         return res1;
     }
 }

@@ -43,8 +43,6 @@ public class ITSearchTask extends RecursiveTask<List<File>> {
             String content = Files.readString(file.toPath()).toLowerCase();
             long count = IT_KEYWORDS.stream().filter(content::contains).count();
             return count >= 3;
-        } catch (Exception e) {
-            return false;
-        }
+        } catch (Exception e) { return false; }
     }
 }

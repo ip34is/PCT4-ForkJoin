@@ -7,60 +7,66 @@ import java.util.concurrent.ForkJoinPool;
 public class Main {
     public static void main(String[] args) {
         ForkJoinPool pool = new ForkJoinPool();
-
-        List<String> text = Arrays.asList("Java", "is", "a", "powerful", "language", "for", "concurrency");
+        List<String> text = Arrays.asList(
+                "Java", "is", "a", "powerful", "language", "for", "concurrency",
+                "ForkJoin", "framework", "helps", "to", "process", "tasks", "parallel"
+        );
         Map<Integer, Integer> stats = pool.invoke(new WordLengthTask(text));
-        System.out.println("Статистика довжини слів: " + stats);
 
+        int totalWords = stats.values().stream().mapToInt(Integer::intValue).sum();
         double avg = stats.entrySet().stream()
-                .mapToDouble(e -> e.getKey() * e.getValue()).sum() / text.size();
-        System.out.println("Середня довжина слова: " + avg);
+                .mapToDouble(e -> e.getKey() * e.getValue()).sum() / totalWords;
+
+        double variance = stats.entrySet().stream()
+                .mapToDouble(e -> Math.pow(e.getKey() - avg, 2) * e.getValue()).sum() / totalWords;
+        double sd = Math.sqrt(variance);
+
+        System.out.println("Статистика довжини слів");
+        System.out.println("Гістограма частот (Довжина=Кількість): " + stats);
+        System.out.printf("Середнє значення: %.2f\n", avg);
+        System.out.printf("Середньо-квадратичне відхилення: %.2f\n\n", sd);
 
         int size = 3000;
         double[][] A = MatrixUtils.generate(size);
         double[][] B = MatrixUtils.generate(size);
         double[][] C = new double[size][size];
 
-        long startSeq = System.currentTimeMillis();
+        long s1 = System.nanoTime();
         MatrixUtils.sequentialMultiply(A, B);
-        long endSeq = System.currentTimeMillis();
-        double tSeq = (endSeq - startSeq) / 1000.0;
+        long e1 = System.nanoTime();
+        double tSeq = (e1 - s1) / 1_000_000_000.0;
 
-        ForkJoinPool pool1 = new ForkJoinPool();
-        long startFJ = System.currentTimeMillis();
-        pool1.invoke(new MatrixTask(A, B, C, 0, size));
-        long endFJ = System.currentTimeMillis();
-        double tFJ = (endFJ - startFJ) / 1000.0;
+        long s2 = System.nanoTime();
+        pool.invoke(new MatrixTask(A, B, C, 0, size));
+        long e2 = System.nanoTime();
+        double tFJ = (e2 - s2) / 1_000_000_000.0;
 
         double speedup = tSeq / tFJ;
+        int procs = Runtime.getRuntime().availableProcessors();
+        double efficiency = speedup / procs;
 
-        System.out.println("Результати:");
-        System.out.printf("Час послідовного (T_posl): %.4f с\n", tSeq);
-        System.out.printf("Час ForkJoin (T_fj):       %.4f с\n", tFJ);
-        System.out.printf("Прискорення (S):           %.2fx\n", speedup);
+        System.out.println("Ефективність ForkJoin");
+        System.out.printf("Послідовно: %.4f с | ForkJoin: %.4f с\n", tSeq, tFJ);
+        System.out.printf("Прискорення (S): %.2fx | Ефективність (E): %.2f\n\n", speedup, efficiency);
 
-        List<String> doc1 = Arrays.asList("apple", "banana", "cherry");
-        List<String> doc2 = Arrays.asList("banana", "cherry", "dragonfruit");
-        Set<String> set1 = pool.invoke(new CommonWordsTask(doc1));
-        Set<String> set2 = pool.invoke(new CommonWordsTask(doc2));
-        set1.retainAll(set2);
-        System.out.println("Спільні слова: " + set1);
 
-        File dir = new File("src/main/java/test_docs");
+        List<List<String>> docs = Arrays.asList(
+                Arrays.asList("apple", "banana", "cherry", "java"),
+                Arrays.asList("banana", "cherry", "dragonfruit", "java"),
+                Arrays.asList("cherry", "java", "kiwi", "banana")
+        );
+        Set<String> commonWords = pool.invoke(new CommonWordsTask(docs));
+        System.out.println("Спільні слова\n" + commonWords + "\n");
+
+
+        File dir = new File("test_docs");
         if (dir.exists() && dir.isDirectory()) {
             File[] files = dir.listFiles((d, name) -> name.endsWith(".txt"));
             if (files != null) {
                 ITSearchTask itTask = new ITSearchTask(files, 0, files.length);
-                List<File> itDocuments = pool.invoke(itTask);
-
-                System.out.println("Результати IT Search");
-                System.out.println("Знайдено IT-документів: " + itDocuments.size());
-                for (File f : itDocuments) {
-                    System.out.println("Документ: " + f.getName());
-                }
+                List<File> found = pool.invoke(itTask);
+                System.out.println("IT Search\nЗнайдено IT-документів: " + found.size());
             }
-        } else {
-            System.out.println("Папка test_docs не знайдена.");
         }
     }
 }
